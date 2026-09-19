@@ -45,6 +45,14 @@ Swagger: http://localhost:5000/swagger
 
 В `Development` API может автоматически применить EF Core migrations и создать seed-данные: администратора и страницу `about`. Для этого включите `Database:ApplyMigrationsOnStartup=true` в локальном `appsettings.Development.json` или через переменную окружения `Database__ApplyMigrationsOnStartup=true`. Учетные данные администратора берутся из `Seed:Admin:Login` и `Seed:Admin:Password`; локальные значения предназначены только для разработки. Пароль сохраняется в базе как PBKDF2-хеш.
 
+PageContent API для страницы "О себе":
+
+- `GET /api/pages/about` - публичное получение HTML-контента.
+- `GET /api/admin/pages/about` - получение HTML-контента для админки, требует Bearer token.
+- `PUT /api/admin/pages/about` - обновление HTML-контента, требует Bearer token.
+
+HTML-контент в текущем MVP хранится как есть и редактируется только через защищенную админку. Перед финальной сдачей нужно вернуться к security pass и добавить или явно описать sanitizer/whitelist-стратегию для XSS-рисков.
+
 ## Public Web
 
 ```bash
