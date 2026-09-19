@@ -2,7 +2,7 @@
 
 Портфолио-лендинг с управляемым контентом для демонстрации опыта в ИИ, backend/frontend-разработке, интеграциях и автоматизации.
 
-Проект состоит из публичного сайта, административной панели, backend API, PostgreSQL и SeaweedFS. Sprint 00 подготавливает только запускаемый технический фундамент без бизнес-логики.
+Проект состоит из публичного сайта, административной панели, backend API, PostgreSQL и SeaweedFS. Sprint 01 добавляет backend foundation: доменную модель, EF Core, PostgreSQL, миграции, Swagger и стартовые данные.
 
 ## Структура
 
@@ -40,7 +40,10 @@ dotnet run --project src/Portfolio.Api/Portfolio.Api.csproj
 
 ```text
 GET http://localhost:5000/health
+Swagger: http://localhost:5000/swagger
 ```
+
+В `Development` API может автоматически применить EF Core migrations и создать seed-данные: администратора и страницу `about`. Для этого включите `Database:ApplyMigrationsOnStartup=true` в локальном `appsettings.Development.json` или через переменную окружения `Database__ApplyMigrationsOnStartup=true`. Учетные данные администратора берутся из `Seed:Admin:Login` и `Seed:Admin:Password`; локальные значения предназначены только для разработки. Пароль сохраняется в базе как PBKDF2-хеш.
 
 ## Public Web
 
