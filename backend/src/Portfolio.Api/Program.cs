@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +15,7 @@ using Portfolio.Application.Interfaces;
 using Portfolio.Infrastructure.Data;
 using Portfolio.Infrastructure.Security;
 using Portfolio.Infrastructure.Seed;
+using Portfolio.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +45,40 @@ if (string.IsNullOrWhiteSpace(jwtOptions.Issuer)
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+builder.Services.AddSingleton<IAmazonS3>(serviceProvider =>
+{
+    var storageOptions = serviceProvider
+        .GetRequiredService<IConfiguration>()
+        .GetSection(StorageOptions.SectionName)
+        .Get<StorageOptions>()
+        ?? throw new InvalidOperationException("Storage settings are not configured.");
+
+    if (string.IsNullOrWhiteSpace(storageOptions.Endpoint)
+        || string.IsNullOrWhiteSpace(storageOptions.ResolvedBucketName)
+        || string.IsNullOrWhiteSpace(storageOptions.PublicBaseUrl)
+        || string.IsNullOrWhiteSpace(storageOptions.Region))
+    {
+        throw new InvalidOperationException("Storage settings are not configured.");
+    }
+
+    var endpoint = new Uri(storageOptions.Endpoint);
+    var config = new AmazonS3Config
+    {
+        ServiceURL = storageOptions.Endpoint,
+        ForcePathStyle = storageOptions.ForcePathStyle,
+        AuthenticationRegion = storageOptions.Region,
+        UseHttp = endpoint.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+    };
+
+    AWSCredentials credentials = string.IsNullOrWhiteSpace(storageOptions.AccessKey)
+        || string.IsNullOrWhiteSpace(storageOptions.SecretKey)
+            ? new AnonymousAWSCredentials()
+            : new BasicAWSCredentials(storageOptions.AccessKey, storageOptions.SecretKey);
+
+    return new AmazonS3Client(credentials, config);
+});
+builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
 
 builder.Services.AddControllers(options =>
 {
