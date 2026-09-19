@@ -1,5 +1,16 @@
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Portfolio.Api.Conventions;
+using Microsoft.OpenApi.Models;
+using Portfolio.Api.Options;
+using Portfolio.Application.DTOs.Common;
+using Portfolio.Application.Interfaces;
 using Portfolio.Infrastructure.Data;
+using Portfolio.Infrastructure.Security;
 using Portfolio.Infrastructure.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,8 +25,108 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<PortfolioDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+var jwtOptions = builder.Configuration
+    .GetSection(JwtOptions.SectionName)
+    .Get<JwtOptions>()
+    ?? throw new InvalidOperationException("JWT settings are not configured.");
+
+if (string.IsNullOrWhiteSpace(jwtOptions.Issuer)
+    || string.IsNullOrWhiteSpace(jwtOptions.Audience)
+    || string.IsNullOrWhiteSpace(jwtOptions.Secret)
+    || jwtOptions.Secret.Length < 32
+    || jwtOptions.LifetimeMinutes <= 0)
+{
+    throw new InvalidOperationException("JWT settings are invalid.");
+}
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
+
+builder.Services.AddControllers(options =>
+{
+    options.Conventions.Add(new AdminApiAuthorizeConvention());
+});
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(modelState => modelState.Value?.Errors.Count > 0)
+            .ToDictionary(
+                modelState => modelState.Key,
+                modelState => modelState.Value!.Errors
+                    .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? "Invalid value."
+                        : error.ErrorMessage)
+                    .ToArray());
+
+        return new BadRequestObjectResult(new ErrorResponse("Validation failed.", errors));
+    };
+});
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+
+                var response = new ErrorResponse("Unauthorized.");
+                await context.Response.WriteAsync(JsonSerializer.Serialize(
+                    response,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter a JWT access token."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 builder.Services.AddCors(options =>
 {
@@ -52,11 +163,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("LocalFrontends");
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/", () => Results.Ok(new { service = "Portfolio.Api", status = "running" }))
     .WithName("Root");
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
     .WithName("Health");
+
+app.MapControllers();
 
 app.Run();

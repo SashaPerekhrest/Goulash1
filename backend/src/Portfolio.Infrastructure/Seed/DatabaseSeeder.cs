@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Portfolio.Domain.Entities;
 using Portfolio.Infrastructure.Data;
+using Portfolio.Infrastructure.Security;
 
 namespace Portfolio.Infrastructure.Seed;
 
@@ -20,6 +21,7 @@ public static class DatabaseSeeder
         var adminCreated = false;
         var login = configuration["Seed:Admin:Login"] ?? "admin";
         var password = configuration["Seed:Admin:Password"] ?? "admin";
+        var passwordHasher = new Pbkdf2PasswordHasher();
 
         if (!await dbContext.AdminUsers.AnyAsync(user => user.Login == login, cancellationToken))
         {
@@ -27,7 +29,7 @@ public static class DatabaseSeeder
             {
                 Id = Guid.NewGuid(),
                 Login = login,
-                PasswordHash = PasswordHasher.Hash(password),
+                PasswordHash = passwordHasher.Hash(password),
                 CreatedAt = now,
                 UpdatedAt = now
             });
