@@ -1,0 +1,102 @@
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# .NET build output
+bin/
+obj/
+artifacts/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coveragereport/
+
+# .NET local tooling
+.vs/
+.vscode-test/
+.dotnet/
+*.nupkg
+*.snupkg
+
+# Node.js dependencies and package managers
+node_modules/
+.pnp/
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Vite / frontend build output
+dist/
+build/
+
+# TypeScript / JavaScript cache
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+
+# Docker and local volumes
+docker-compose.override.yml
+docker-compose.*.override.yml
+volumes/
+data/
+postgres-data/
+seaweedfs-data/
+
+# Uploaded/local files
+uploads/
+storage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Generated API clients or reports
+swagger-output/
+openapi-generated/
+reports/
