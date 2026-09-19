@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { Footer } from "../components/Footer";
+import { Header } from "../components/Header";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Портфолио",
+  title: {
+    default: "Портфолио",
+    template: "%s | Портфолио"
+  },
   description: "Публичное портфолио специалиста по работе и внедрению ИИ"
 };
 
@@ -13,7 +18,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body>
+        <Header />
+        {children}
+        <Footer />
+      </body>
     </html>
   );
 }

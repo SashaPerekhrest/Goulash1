@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Application.DTOs.Common;
 using Portfolio.Application.DTOs.PageContent;
+using Portfolio.Api.Security;
 using Portfolio.Domain.Entities;
 using Portfolio.Infrastructure.Data;
 
@@ -59,7 +60,7 @@ public sealed class AdminPagesController(PortfolioDbContext dbContext) : Control
             return NotFound(new ErrorResponse("Page content not found."));
         }
 
-        pageContent.HtmlContent = request.HtmlContent!;
+        pageContent.HtmlContent = HtmlSanitizer.Sanitize(request.HtmlContent!);
         pageContent.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -88,7 +89,7 @@ public sealed class AdminPagesController(PortfolioDbContext dbContext) : Control
         return new AdminPageContentResponse(
             pageContent.Id,
             pageContent.Key,
-            pageContent.HtmlContent,
+            HtmlSanitizer.Sanitize(pageContent.HtmlContent),
             pageContent.CreatedAt,
             pageContent.UpdatedAt);
     }

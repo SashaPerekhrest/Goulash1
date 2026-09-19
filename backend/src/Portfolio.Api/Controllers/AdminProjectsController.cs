@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Application.DTOs.Common;
 using Portfolio.Application.DTOs.Projects;
+using Portfolio.Api.Security;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Enums;
 using Portfolio.Infrastructure.Data;
@@ -106,7 +107,7 @@ public sealed partial class AdminProjectsController(PortfolioDbContext dbContext
             Slug = slug,
             ShortDescription = request.ShortDescription!.Trim(),
             ImageUrl = NormalizeOptionalString(request.ImageUrl),
-            HtmlContent = request.HtmlContent!,
+            HtmlContent = HtmlSanitizer.Sanitize(request.HtmlContent!),
             Category = ParseCategory(request.Category!),
             IsPublished = request.IsPublished!.Value,
             CreatedAt = now,
@@ -161,7 +162,7 @@ public sealed partial class AdminProjectsController(PortfolioDbContext dbContext
         project.Slug = slug;
         project.ShortDescription = request.ShortDescription!.Trim();
         project.ImageUrl = NormalizeOptionalString(request.ImageUrl);
-        project.HtmlContent = request.HtmlContent!;
+        project.HtmlContent = HtmlSanitizer.Sanitize(request.HtmlContent!);
         project.Category = ParseCategory(request.Category!);
         project.IsPublished = request.IsPublished!.Value;
         project.UpdatedAt = DateTime.UtcNow;
@@ -347,7 +348,7 @@ public sealed partial class AdminProjectsController(PortfolioDbContext dbContext
             project.Slug,
             project.ShortDescription,
             project.ImageUrl,
-            project.HtmlContent,
+            HtmlSanitizer.Sanitize(project.HtmlContent),
             project.Category,
             project.IsPublished,
             project.CreatedAt,

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Application.DTOs.Common;
 using Portfolio.Application.DTOs.Projects;
+using Portfolio.Api.Security;
 using Portfolio.Domain.Entities;
 using Portfolio.Domain.Enums;
 using Portfolio.Infrastructure.Data;
@@ -84,7 +85,7 @@ public sealed class ProjectsController(PortfolioDbContext dbContext) : Controlle
             project.Slug,
             project.ShortDescription,
             project.ImageUrl,
-            project.HtmlContent,
+            HtmlSanitizer.Sanitize(project.HtmlContent),
             project.Category,
             project.IsPublished,
             project.CreatedAt,

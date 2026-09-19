@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Application.DTOs.Common;
 using Portfolio.Application.DTOs.PageContent;
+using Portfolio.Api.Security;
 using Portfolio.Infrastructure.Data;
 
 namespace Portfolio.Api.Controllers;
@@ -31,6 +32,9 @@ public sealed class PagesController(PortfolioDbContext dbContext) : ControllerBa
             return NotFound(new ErrorResponse("Page content not found."));
         }
 
-        return Ok(pageContent);
+        return Ok(pageContent with
+        {
+            HtmlContent = HtmlSanitizer.Sanitize(pageContent.HtmlContent)
+        });
     }
 }
