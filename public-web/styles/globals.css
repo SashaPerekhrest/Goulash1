@@ -1,9 +1,54 @@
 :root {
-  color: #202124;
-  background: #f6f7f9;
+  color: var(--color-text);
+  color-scheme: light;
+  background: var(--color-page);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
+  --color-page: #f6f7f9;
+  --color-page-gradient-start: #ffffff;
+  --color-text: #202124;
+  --color-heading: #111827;
+  --color-muted: #4b5563;
+  --color-subtle: #6b7280;
+  --color-border: #dfe3e8;
+  --color-card-border: #dce2e8;
+  --color-card-border-hover: #9bb8d3;
+  --color-card: #ffffff;
+  --color-surface-muted: #e9eef3;
+  --color-nav-hover: #edf2f7;
+  --color-accent: #1f6f8b;
+  --color-accent-strong: #123c69;
+  --color-accent-text: #ffffff;
+  --color-link: #0f609b;
+  --color-dashed-border: #b9c4cf;
+  --shadow-card-hover: 0 14px 36px rgba(18, 60, 105, 0.12);
+  --header-background: rgba(255, 255, 255, 0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-page: #0f141b;
+    --color-page-gradient-start: #171f2a;
+    --color-text: #dce4ee;
+    --color-heading: #f4f7fb;
+    --color-muted: #b5c0ce;
+    --color-subtle: #94a3b8;
+    --color-border: #2b3645;
+    --color-card-border: #303d4d;
+    --color-card-border-hover: #5f8fb1;
+    --color-card: #151c26;
+    --color-surface-muted: #1f2a37;
+    --color-nav-hover: #202b38;
+    --color-accent: #7bc3df;
+    --color-accent-strong: #9ad7f0;
+    --color-accent-text: #081018;
+    --color-link: #8fd3ef;
+    --color-dashed-border: #4a5b70;
+    --shadow-card-hover: 0 18px 42px rgba(0, 0, 0, 0.32);
+    --header-background: rgba(15, 20, 27, 0.9);
+  }
 }
 
 * {
@@ -13,10 +58,10 @@
 body {
   margin: 0;
   min-width: 320px;
-  color: #202124;
+  color: var(--color-text);
   background:
-    linear-gradient(180deg, #ffffff 0, #f6f7f9 320px),
-    #f6f7f9;
+    linear-gradient(180deg, var(--color-page-gradient-start) 0, var(--color-page) 320px),
+    var(--color-page);
 }
 
 a {
@@ -31,8 +76,8 @@ img {
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid #dfe3e8;
-  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--header-background);
   backdrop-filter: blur(12px);
 }
 
@@ -66,7 +111,7 @@ img {
 
 .site-nav__link {
   border-radius: 999px;
-  color: #4b5563;
+  color: var(--color-muted);
   font-size: 15px;
   font-weight: 650;
   line-height: 1.2;
@@ -78,18 +123,18 @@ img {
 }
 
 .site-nav__link:hover {
-  background: #edf2f7;
-  color: #111827;
+  background: var(--color-nav-hover);
+  color: var(--color-heading);
 }
 
 .site-nav__link[aria-current="page"] {
-  background: #123c69;
-  color: #ffffff;
+  background: var(--color-accent-strong);
+  color: var(--color-accent-text);
 }
 
 .site-footer {
-  border-top: 1px solid #dfe3e8;
-  color: #6b7280;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-subtle);
 }
 
 .site-footer__inner {
@@ -115,7 +160,7 @@ img {
 
 .eyebrow {
   margin: 0 0 10px;
-  color: #1f6f8b;
+  color: var(--color-accent);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
@@ -126,7 +171,7 @@ img {
 .project-detail h1,
 .html-content h1 {
   margin: 0;
-  color: #111827;
+  color: var(--color-heading);
   font-size: clamp(34px, 6vw, 56px);
   line-height: 1.05;
 }
@@ -134,7 +179,7 @@ img {
 .page-heading p:not(.eyebrow),
 .project-detail__lead {
   margin: 18px 0 0;
-  color: #4b5563;
+  color: var(--color-muted);
   font-size: 19px;
   line-height: 1.7;
 }
@@ -150,9 +195,9 @@ img {
   gap: 22px;
   align-items: stretch;
   overflow: hidden;
-  border: 1px solid #dce2e8;
+  border: 1px solid var(--color-card-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--color-card);
   color: inherit;
   text-decoration: none;
   transition:
@@ -162,8 +207,8 @@ img {
 }
 
 .project-card:hover {
-  border-color: #9bb8d3;
-  box-shadow: 0 14px 36px rgba(18, 60, 105, 0.12);
+  border-color: var(--color-card-border-hover);
+  box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
 }
 
@@ -171,7 +216,7 @@ img {
   display: grid;
   min-height: 132px;
   place-items: center;
-  background: #e9eef3;
+  background: var(--color-surface-muted);
 }
 
 .project-card__image {
@@ -185,10 +230,10 @@ img {
   width: 68px;
   height: 68px;
   place-items: center;
-  border: 1px solid #bdd4e8;
+  border: 1px solid var(--color-card-border-hover);
   border-radius: 8px;
-  background: #ffffff;
-  color: #123c69;
+  background: var(--color-card);
+  color: var(--color-accent-strong);
   font-size: 20px;
   font-weight: 850;
 }
@@ -201,7 +246,7 @@ img {
 .project-card__body h2 {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #111827;
+  color: var(--color-heading);
   font-size: 22px;
   line-height: 1.25;
 }
@@ -209,15 +254,15 @@ img {
 .project-card__body p {
   margin: 10px 0 0;
   overflow-wrap: anywhere;
-  color: #4b5563;
+  color: var(--color-muted);
   font-size: 16px;
   line-height: 1.6;
 }
 
 .empty-state {
-  border: 1px dashed #b9c4cf;
+  border: 1px dashed var(--color-dashed-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--color-card);
   padding: 32px;
 }
 
@@ -228,21 +273,21 @@ img {
 .empty-state h1,
 .empty-state h2 {
   margin: 0;
-  color: #111827;
+  color: var(--color-heading);
   font-size: 26px;
   line-height: 1.25;
 }
 
 .empty-state p {
   margin: 10px 0 0;
-  color: #5f6b7a;
+  color: var(--color-muted);
   font-size: 16px;
   line-height: 1.6;
 }
 
 .project-detail__meta {
   margin-bottom: 12px;
-  color: #1f6f8b;
+  color: var(--color-accent);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
@@ -260,7 +305,7 @@ img {
 
 .html-content {
   overflow-wrap: anywhere;
-  color: #2f3742;
+  color: var(--color-text);
   font-size: 18px;
   line-height: 1.75;
 }
@@ -282,7 +327,7 @@ img {
 .html-content h1,
 .html-content h2,
 .html-content h3 {
-  color: #111827;
+  color: var(--color-heading);
   line-height: 1.2;
 }
 
@@ -308,7 +353,7 @@ img {
 }
 
 .html-content a {
-  color: #0f609b;
+  color: var(--color-link);
   font-weight: 700;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
