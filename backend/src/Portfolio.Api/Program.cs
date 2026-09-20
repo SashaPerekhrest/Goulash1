@@ -194,16 +194,16 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
 
-    if (app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", false))
-    {
-        using var scope = app.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioDbContext>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseStartup");
+if (app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", false))
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<PortfolioDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseStartup");
 
-        await dbContext.Database.MigrateAsync();
-        await DatabaseSeeder.SeedAsync(dbContext, app.Configuration, logger);
-    }
+    await dbContext.Database.MigrateAsync();
+    await DatabaseSeeder.SeedAsync(dbContext, app.Configuration, logger);
 }
 
 app.UseCors("LocalFrontends");

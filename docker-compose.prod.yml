@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: portfolio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: portfolio-seaweedfs
+    restart: unless-stopped
+    command: "server -dir=/data -s3 -s3.port=8333 -master.port=9333"
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - seaweedfs-data:/data
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required}/goulash1-api:${IMAGE_TAG:-latest}
+    container_name: portfolio-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:?POSTGRES_DB is required};Username=${POSTGRES_USER:?POSTGRES_USER is required};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      Database__ApplyMigrationsOnStartup: ${Database__ApplyMigrationsOnStartup:-true}
+      Seed__Admin__Login: ${SEED_ADMIN_LOGIN:?SEED_ADMIN_LOGIN is required}
+      Seed__Admin__Password: ${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD is required}
+      Jwt__Issuer: ${JWT_ISSUER:?JWT_ISSUER is required}
+      Jwt__Audience: ${JWT_AUDIENCE:?JWT_AUDIENCE is required}
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
+      Jwt__LifetimeMinutes: ${JWT_LIFETIME_MINUTES:-60}
+      Cors__AllowedOrigins__0: ${PUBLIC_SITE_ORIGIN:?PUBLIC_SITE_ORIGIN is required}
+      Storage__Endpoint: http://seaweedfs:8333
+      Storage__PublicBaseUrl: ${STORAGE_PUBLIC_BASE_URL:?STORAGE_PUBLIC_BASE_URL is required}
+      Storage__BucketName: ${STORAGE_BUCKET_NAME:-portfolio}
+      Storage__ForcePathStyle: "true"
+      Storage__CreateBucketIfNotExists: "true"
+      Storage__Region: ${STORAGE_REGION:-us-east-1}
+      Storage__AccessKey: ${STORAGE_ACCESS_KEY:-}
+      Storage__SecretKey: ${STORAGE_SECRET_KEY:-}
+    ports:
+      - "127.0.0.1:5000:5000"
+
+  public-web:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required}/goulash1-public-web:${IMAGE_TAG:-latest}
+    container_name: portfolio-public-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      API_URL: http://api:5000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  admin-web:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required}/goulash1-admin-web:${IMAGE_TAG:-latest}
+    container_name: portfolio-admin-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5173:5173"
+
+volumes:
+  postgres-data:
+  seaweedfs-data:

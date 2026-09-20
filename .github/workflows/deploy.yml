@@ -1,0 +1,142 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  PUBLIC_API_BASE_URL: /api
+
+jobs:
+  build_and_push_images:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    outputs:
+      ghcr_owner: ${{ steps.image_names.outputs.owner }}
+      image_tag: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image names
+        id: image_names
+        shell: bash
+        env:
+          GHCR_OWNER_INPUT: ${{ vars.GHCR_OWNER }}
+        run: |
+          owner_source="${GHCR_OWNER_INPUT:-$GITHUB_REPOSITORY_OWNER}"
+          owner="$(echo "${owner_source}" | tr '[:upper:]' '[:lower:]')"
+          echo "owner=${owner}" >> "$GITHUB_OUTPUT"
+          echo "api_image=${REGISTRY}/${owner}/goulash1-api" >> "$GITHUB_OUTPUT"
+          echo "public_web_image=${REGISTRY}/${owner}/goulash1-public-web" >> "$GITHUB_OUTPUT"
+          echo "admin_web_image=${REGISTRY}/${owner}/goulash1-admin-web" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.GHCR_USERNAME || github.actor }}
+          password: ${{ secrets.GHCR_PAT || github.token }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image_names.outputs.api_image }}:${{ github.sha }}
+            ${{ steps.image_names.outputs.api_image }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push Public Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./public-web
+          file: ./public-web/Dockerfile
+          push: true
+          build-args: |
+            API_URL=http://api:5000
+            NEXT_PUBLIC_API_URL=${{ env.PUBLIC_API_BASE_URL }}
+          tags: |
+            ${{ steps.image_names.outputs.public_web_image }}:${{ github.sha }}
+            ${{ steps.image_names.outputs.public_web_image }}:latest
+          cache-from: type=gha,scope=public-web
+          cache-to: type=gha,mode=max,scope=public-web
+
+      - name: Build and push Admin Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./admin-web
+          file: ./admin-web/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=${{ env.PUBLIC_API_BASE_URL }}
+          tags: |
+            ${{ steps.image_names.outputs.admin_web_image }}:${{ github.sha }}
+            ${{ steps.image_names.outputs.admin_web_image }}:latest
+          cache-from: type=gha,scope=admin-web
+          cache-to: type=gha,mode=max,scope=admin-web
+
+  deploy_to_server:
+    name: Deploy to server
+    runs-on: ubuntu-latest
+    needs: build_and_push_images
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SERVER_PORT" "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload deployment files
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          test -n "$SERVER_USER"
+          test -n "$DEPLOY_PATH"
+          ssh -i ~/.ssh/deploy_key -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p '$DEPLOY_PATH/scripts'"
+          scp -i ~/.ssh/deploy_key -P "$SERVER_PORT" docker-compose.prod.yml "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/docker-compose.prod.yml"
+          scp -i ~/.ssh/deploy_key -P "$SERVER_PORT" scripts/deploy.sh "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/scripts/deploy.sh"
+
+      - name: Pull images and restart containers
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_OWNER: ${{ needs.build_and_push_images.outputs.ghcr_owner }}
+          IMAGE_TAG: ${{ needs.build_and_push_images.outputs.image_tag }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_READ_TOKEN || secrets.GHCR_PAT }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+            "cd '$DEPLOY_PATH' && chmod +x scripts/deploy.sh && GHCR_OWNER='$GHCR_OWNER' IMAGE_TAG='$IMAGE_TAG' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' scripts/deploy.sh"
