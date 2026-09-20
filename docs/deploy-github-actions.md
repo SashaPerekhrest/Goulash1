@@ -102,7 +102,8 @@ PUBLIC_SITE_ORIGIN=https://example.com
 
 API_URL=http://api:5000
 NEXT_PUBLIC_API_URL=/api
-VITE_API_BASE_URL=/api
+# Admin API paths already include /api, so keep this empty for same-origin nginx routing.
+VITE_API_BASE_URL=
 
 POSTGRES_DB=portfolio
 POSTGRES_USER=portfolio

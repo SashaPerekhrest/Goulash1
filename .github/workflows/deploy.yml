@@ -11,7 +11,8 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  PUBLIC_API_BASE_URL: /api
+  NEXT_PUBLIC_API_BASE_URL: /api
+  ADMIN_API_BASE_URL: ""
 
 jobs:
   build_and_push_images:
@@ -68,7 +69,7 @@ jobs:
           push: true
           build-args: |
             API_URL=http://api:5000
-            NEXT_PUBLIC_API_URL=${{ env.PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_BASE_URL }}
           tags: |
             ${{ steps.image_names.outputs.public_web_image }}:${{ github.sha }}
             ${{ steps.image_names.outputs.public_web_image }}:latest
@@ -82,7 +83,7 @@ jobs:
           file: ./admin-web/Dockerfile
           push: true
           build-args: |
-            VITE_API_BASE_URL=${{ env.PUBLIC_API_BASE_URL }}
+            VITE_API_BASE_URL=${{ env.ADMIN_API_BASE_URL }}
           tags: |
             ${{ steps.image_names.outputs.admin_web_image }}:${{ github.sha }}
             ${{ steps.image_names.outputs.admin_web_image }}:latest
