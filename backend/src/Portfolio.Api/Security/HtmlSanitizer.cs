@@ -63,6 +63,7 @@ public static partial class HtmlSanitizer
                 "alt",
                 "height",
                 "src",
+                "style",
                 "title",
                 "width"
             },
@@ -130,13 +131,23 @@ public static partial class HtmlSanitizer
             var attributeName = attributeMatch.Groups["name"].Value.ToLowerInvariant();
             if (!allowedAttributes.Contains(attributeName)
                 || attributeName.StartsWith("on", StringComparison.OrdinalIgnoreCase)
-                || attributeName.Equals("style", StringComparison.OrdinalIgnoreCase)
                 || attributeName.Equals("srcdoc", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             var attributeValue = GetAttributeValue(attributeMatch);
+            if (attributeName.Equals("style", StringComparison.OrdinalIgnoreCase))
+            {
+                var safeStyle = SanitizeStyle(tagName, attributeValue);
+                if (!string.IsNullOrWhiteSpace(safeStyle))
+                {
+                    attributes.Add($"style=\"{HtmlEncoder.Default.Encode(safeStyle)}\"");
+                }
+
+                continue;
+            }
+
             if (RequiresSafeUrl(attributeName) && !IsSafeUrl(attributeValue))
             {
                 continue;
@@ -172,6 +183,85 @@ public static partial class HtmlSanitizer
         }
 
         return string.Join(" ", attributes);
+    }
+
+    private static string SanitizeStyle(string tagName, string rawStyle)
+    {
+        if (!tagName.Equals("img", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(rawStyle)
+            || ContainsDangerousStyleContent(rawStyle))
+        {
+            return string.Empty;
+        }
+
+        var declarations = new List<string>();
+        foreach (var rawDeclaration in rawStyle.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var separatorIndex = rawDeclaration.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var propertyName = rawDeclaration[..separatorIndex].Trim().ToLowerInvariant();
+            var propertyValue = rawDeclaration[(separatorIndex + 1)..].Trim().ToLowerInvariant();
+
+            if (IsSafeImageStyle(propertyName, propertyValue))
+            {
+                declarations.Add($"{propertyName}: {propertyValue}");
+            }
+        }
+
+        return string.Join("; ", declarations);
+    }
+
+    private static bool ContainsDangerousStyleContent(string rawStyle)
+    {
+        return rawStyle.Contains("url(", StringComparison.OrdinalIgnoreCase)
+            || rawStyle.Contains("expression(", StringComparison.OrdinalIgnoreCase)
+            || rawStyle.Contains("javascript:", StringComparison.OrdinalIgnoreCase)
+            || rawStyle.Contains("vbscript:", StringComparison.OrdinalIgnoreCase)
+            || rawStyle.Contains("-moz-binding", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSafeImageStyle(string propertyName, string propertyValue)
+    {
+        if (propertyName == "float")
+        {
+            return propertyValue is "left" or "right" or "none";
+        }
+
+        if (propertyName == "display")
+        {
+            return propertyValue is "block" or "inline" or "inline-block";
+        }
+
+        if (propertyName is "margin" or "margin-left" or "margin-right" or "margin-top" or "margin-bottom")
+        {
+            return IsSafeSpacingValue(propertyValue);
+        }
+
+        if (propertyName is "width" or "height" or "max-width")
+        {
+            return IsSafeLengthValue(propertyValue);
+        }
+
+        return false;
+    }
+
+    private static bool IsSafeSpacingValue(string value)
+    {
+        return value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Length is > 0 and <= 4
+            && value
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .All(part => part == "auto" || IsSafeLengthValue(part));
+    }
+
+    private static bool IsSafeLengthValue(string value)
+    {
+        return LengthValueRegex().IsMatch(value);
     }
 
     private static string GetAttributeValue(Match attributeMatch)
@@ -236,4 +326,7 @@ public static partial class HtmlSanitizer
 
     [GeneratedRegex("(?<name>[a-zA-Z_:][a-zA-Z0-9_:\\.-]*)(?:\\s*=\\s*(?:\"(?<dq>[^\"]*)\"|'(?<sq>[^']*)'|(?<bare>[^\\s\"'=<>`]+)))?")]
     private static partial Regex AttributeRegex();
+
+    [GeneratedRegex("^(?:0|\\d+(?:\\.\\d+)?(?:px|%|em|rem))$")]
+    private static partial Regex LengthValueRegex();
 }

@@ -265,6 +265,12 @@ img {
   line-height: 1.75;
 }
 
+.html-content::after {
+  display: block;
+  clear: both;
+  content: "";
+}
+
 .project-detail .html-content {
   margin-top: 32px;
 }
