@@ -44,16 +44,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         <div className="project-detail__meta">
           {project.category === "AI" ? "Проект с ИИ" : "Другой проект"}
         </div>
-        <h1>{project.title}</h1>
-        <p className="project-detail__lead">{project.shortDescription}</p>
-
-        {project.imageUrl ? (
-          <img
-            alt=""
-            className="project-detail__image"
-            src={project.imageUrl}
-          />
-        ) : null}
 
         {project.htmlContent ? (
           <div
