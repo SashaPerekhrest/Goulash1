@@ -51,7 +51,7 @@ PageContent API для страницы "О себе":
 - `GET /api/admin/pages/about` - получение HTML-контента для админки, требует Bearer token.
 - `PUT /api/admin/pages/about` - обновление HTML-контента, требует Bearer token.
 
-HTML-контент в текущем MVP хранится как есть и редактируется только через защищенную админку. Перед финальной сдачей нужно вернуться к security pass и добавить или явно описать sanitizer/whitelist-стратегию для XSS-рисков.
+HTML-контент редактируется через защищенную админку и проходит backend sanitizer с whitelist тегов и атрибутов. Перед финальной сдачей нужно повторно проверить whitelist в рамках security pass.
 
 ## Public Web
 
@@ -73,6 +73,7 @@ npm run build
 
 В локальной разработке админка открывается по адресу `http://localhost:5173/admin`.
 API endpoint задается через `VITE_API_BASE_URL`, по умолчанию используется `http://localhost:5000`.
+Раздел `/admin/about` загружает страницу `about`, редактирует HTML через TinyMCE и сохраняет изменения через `PUT /api/admin/pages/about`.
 На текущем MVP-этапе JWT access token хранится в `localStorage`; это удобно для локальной демонстрации, но финальный security pass должен повторно оценить этот компромисс.
 
 ## Инфраструктура

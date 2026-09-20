@@ -13,10 +13,12 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.4.0",
     "@tanstack/react-query": "^5.103.1",
+    "@tinymce/tinymce-react": "^6.3.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.88.0",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "tinymce": "^8.9.1"
   },
   "devDependencies": {
     "@types/react": "^19.1.13",

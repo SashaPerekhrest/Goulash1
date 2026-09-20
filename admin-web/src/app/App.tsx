@@ -6,6 +6,7 @@ import { AdminLayout } from "../components/Layout/AdminLayout";
 import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { LoginPage } from "../features/auth/LoginPage";
 import { RequireAuth } from "../features/auth/RequireAuth";
+import { AboutPage } from "../features/pages/AboutPage";
 import { AdminPagePlaceholder } from "../features/pages/AdminPagePlaceholder";
 
 const queryClient = new QueryClient({
@@ -48,7 +49,7 @@ export function App() {
               <Route element={<RequireAuth />}>
                 <Route element={<AdminLayout />}>
                   <Route
-                    element={<AdminPagePlaceholder caption="HTML-контент страницы будет редактироваться здесь." title="О себе" />}
+                    element={<AboutPage />}
                     path="/about"
                   />
                   <Route
