@@ -82,6 +82,8 @@ docker-compose.override.yml
 docker-compose.*.override.yml
 volumes/
 data/
+!backend/src/Portfolio.Infrastructure/Data/
+!backend/src/Portfolio.Infrastructure/Data/*.cs
 postgres-data/
 seaweedfs-data/
 
