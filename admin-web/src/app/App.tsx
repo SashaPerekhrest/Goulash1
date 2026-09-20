@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "../features/auth/AuthContext";
 import { LoginPage } from "../features/auth/LoginPage";
 import { RequireAuth } from "../features/auth/RequireAuth";
 import { AboutPage } from "../features/pages/AboutPage";
-import { AdminPagePlaceholder } from "../features/pages/AdminPagePlaceholder";
+import { ProjectsPage } from "../features/projects/ProjectsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,11 +53,11 @@ export function App() {
                     path="/about"
                   />
                   <Route
-                    element={<AdminPagePlaceholder caption="Таблица проектов категории AI появится в следующем спринте." title="Проекты с ИИ" />}
+                    element={<ProjectsPage category="AI" title="Проекты с ИИ" />}
                     path="/ai-projects"
                   />
                   <Route
-                    element={<AdminPagePlaceholder caption="Таблица проектов категории OTHER появится в следующем спринте." title="Другие проекты" />}
+                    element={<ProjectsPage category="OTHER" title="Другие проекты" />}
                     path="/other-projects"
                   />
                 </Route>

@@ -28,6 +28,73 @@ services:
     volumes:
       - seaweedfs-data:/data
 
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-portfolio};Username=${POSTGRES_USER:-portfolio};Password=${POSTGRES_PASSWORD:-portfolio_dev_password}
+      Database__ApplyMigrationsOnStartup: "true"
+      Seed__Admin__Login: ${SEED_ADMIN_LOGIN:-docker-admin}
+      Seed__Admin__Password: ${SEED_ADMIN_PASSWORD:-portfolio_dev_password}
+      Jwt__Issuer: ${JWT_ISSUER:-portfolio}
+      Jwt__Audience: ${JWT_AUDIENCE:-portfolio-admin}
+      Jwt__Secret: ${JWT_SECRET:-replace-with-a-long-local-development-secret}
+      Jwt__LifetimeMinutes: ${JWT_LIFETIME_MINUTES:-60}
+      Cors__AllowedOrigins__0: http://localhost:3000
+      Cors__AllowedOrigins__1: http://localhost:5173
+      Storage__Endpoint: http://seaweedfs:8333
+      Storage__PublicBaseUrl: http://localhost:8333/portfolio
+      Storage__BucketName: ${STORAGE_BUCKET_NAME:-portfolio}
+      Storage__ForcePathStyle: "true"
+      Storage__CreateBucketIfNotExists: "true"
+      Storage__Region: ${STORAGE_REGION:-us-east-1}
+      Storage__AccessKey: ${STORAGE_ACCESS_KEY:-}
+      Storage__SecretKey: ${STORAGE_SECRET_KEY:-}
+    ports:
+      - "5000:5000"
+
+  public-web:
+    build:
+      context: ./public-web
+      dockerfile: Dockerfile
+      args:
+        API_URL: ${API_URL:-http://api:5000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    container_name: portfolio-public-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      API_URL: ${API_URL:-http://api:5000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    ports:
+      - "3000:3000"
+
+  admin-web:
+    build:
+      context: ./admin-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
+    container_name: portfolio-admin-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "5173:5173"
+
 volumes:
   postgres-data:
   seaweedfs-data:
