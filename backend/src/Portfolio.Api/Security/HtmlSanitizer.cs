@@ -12,7 +12,10 @@ public static partial class HtmlSanitizer
         "b",
         "blockquote",
         "br",
+        "caption",
         "code",
+        "col",
+        "colgroup",
         "div",
         "em",
         "h1",
@@ -34,6 +37,7 @@ public static partial class HtmlSanitizer
         "table",
         "tbody",
         "td",
+        "tfoot",
         "th",
         "thead",
         "tr",
@@ -44,6 +48,7 @@ public static partial class HtmlSanitizer
     private static readonly ISet<string> VoidTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "br",
+        "col",
         "hr",
         "img"
     };
@@ -70,12 +75,32 @@ public static partial class HtmlSanitizer
             ["td"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "colspan",
-                "rowspan"
+                "height",
+                "rowspan",
+                "style",
+                "valign",
+                "width"
+            },
+            ["table"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "height",
+                "style",
+                "width"
             },
             ["th"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "colspan",
-                "rowspan"
+                "height",
+                "rowspan",
+                "style",
+                "valign",
+                "width"
+            },
+            ["col"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "span",
+                "style",
+                "width"
             }
         };
 
@@ -153,8 +178,19 @@ public static partial class HtmlSanitizer
                 continue;
             }
 
-            if (attributeName is "width" or "height" or "colspan" or "rowspan"
+            if ((attributeName is "width" or "height")
+                && !IsSafeDimensionAttributeValue(attributeValue))
+            {
+                continue;
+            }
+
+            if ((attributeName is "colspan" or "rowspan" or "span")
                 && !IsPositiveInteger(attributeValue))
+            {
+                continue;
+            }
+
+            if (attributeName == "valign" && !IsSafeVerticalAlign(attributeValue))
             {
                 continue;
             }
@@ -187,7 +223,7 @@ public static partial class HtmlSanitizer
 
     private static string SanitizeStyle(string tagName, string rawStyle)
     {
-        if (!tagName.Equals("img", StringComparison.OrdinalIgnoreCase)
+        if (!AllowsStyleAttribute(tagName)
             || string.IsNullOrWhiteSpace(rawStyle)
             || ContainsDangerousStyleContent(rawStyle))
         {
@@ -206,13 +242,22 @@ public static partial class HtmlSanitizer
             var propertyName = rawDeclaration[..separatorIndex].Trim().ToLowerInvariant();
             var propertyValue = rawDeclaration[(separatorIndex + 1)..].Trim().ToLowerInvariant();
 
-            if (IsSafeImageStyle(propertyName, propertyValue))
+            if (IsSafeStyle(tagName, propertyName, propertyValue))
             {
                 declarations.Add($"{propertyName}: {propertyValue}");
             }
         }
 
         return string.Join("; ", declarations);
+    }
+
+    private static bool AllowsStyleAttribute(string tagName)
+    {
+        return tagName.Equals("img", StringComparison.OrdinalIgnoreCase)
+            || tagName.Equals("table", StringComparison.OrdinalIgnoreCase)
+            || tagName.Equals("td", StringComparison.OrdinalIgnoreCase)
+            || tagName.Equals("th", StringComparison.OrdinalIgnoreCase)
+            || tagName.Equals("col", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ContainsDangerousStyleContent(string rawStyle)
@@ -222,6 +267,16 @@ public static partial class HtmlSanitizer
             || rawStyle.Contains("javascript:", StringComparison.OrdinalIgnoreCase)
             || rawStyle.Contains("vbscript:", StringComparison.OrdinalIgnoreCase)
             || rawStyle.Contains("-moz-binding", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSafeStyle(string tagName, string propertyName, string propertyValue)
+    {
+        if (tagName.Equals("img", StringComparison.OrdinalIgnoreCase))
+        {
+            return IsSafeImageStyle(propertyName, propertyValue);
+        }
+
+        return IsSafeTableStyle(propertyName, propertyValue);
     }
 
     private static bool IsSafeImageStyle(string propertyName, string propertyValue)
@@ -249,6 +304,46 @@ public static partial class HtmlSanitizer
         return false;
     }
 
+    private static bool IsSafeTableStyle(string propertyName, string propertyValue)
+    {
+        if (propertyName is "width" or "height" or "max-width")
+        {
+            return IsSafeLengthValue(propertyValue);
+        }
+
+        if (propertyName is "padding" or "padding-left" or "padding-right" or "padding-top" or "padding-bottom")
+        {
+            return IsSafeSpacingValue(propertyValue);
+        }
+
+        if (propertyName == "margin")
+        {
+            return IsSafeSpacingValue(propertyValue);
+        }
+
+        if (propertyName == "vertical-align")
+        {
+            return IsSafeVerticalAlign(propertyValue);
+        }
+
+        if (propertyName == "text-align")
+        {
+            return propertyValue is "left" or "center" or "right";
+        }
+
+        if (propertyName == "border-collapse")
+        {
+            return propertyValue is "collapse" or "separate";
+        }
+
+        if (propertyName == "table-layout")
+        {
+            return propertyValue is "auto" or "fixed";
+        }
+
+        return false;
+    }
+
     private static bool IsSafeSpacingValue(string value)
     {
         return value
@@ -262,6 +357,16 @@ public static partial class HtmlSanitizer
     private static bool IsSafeLengthValue(string value)
     {
         return LengthValueRegex().IsMatch(value);
+    }
+
+    private static bool IsSafeDimensionAttributeValue(string value)
+    {
+        return IsPositiveInteger(value) || IsSafeLengthValue(value);
+    }
+
+    private static bool IsSafeVerticalAlign(string value)
+    {
+        return value.Trim().ToLowerInvariant() is "top" or "middle" or "bottom" or "baseline";
     }
 
     private static string GetAttributeValue(Match attributeMatch)

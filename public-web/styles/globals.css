@@ -359,12 +359,34 @@ img {
   text-underline-offset: 3px;
 }
 
+.html-content table {
+  width: 100%;
+  max-width: 100%;
+  margin: 24px 0;
+  border-collapse: collapse;
+}
+
+.html-content td,
+.html-content th {
+  padding: 8px;
+  vertical-align: top;
+}
+
 .html-content img {
   height: auto;
   border-radius: 8px;
 }
 
 @media (max-width: 720px) {
+  .html-content table,
+  .html-content tbody,
+  .html-content tr,
+  .html-content td,
+  .html-content th {
+    display: block;
+    width: 100% !important;
+  }
+
   .site-header__inner {
     align-items: flex-start;
     flex-direction: column;

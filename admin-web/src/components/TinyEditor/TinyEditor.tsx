@@ -8,6 +8,7 @@ import "tinymce/plugins/image";
 import "tinymce/plugins/link";
 import "tinymce/plugins/lists";
 import "tinymce/plugins/code";
+import "tinymce/plugins/table";
 import "tinymce/plugins/wordcount";
 import "tinymce/skins/ui/oxide/skin.min.css";
 import "tinymce/skins/content/default/content.min.css";
@@ -29,7 +30,7 @@ export function TinyEditor({ disabled = false, id = "tiny-editor", onChange, val
         branding: false,
         content_css: false,
         content_style:
-          "body { color: #20242a; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.65; margin: 1rem; } a { color: #2563eb; } img { height: auto; max-width: 100%; } body::after { clear: both; content: ''; display: block; }",
+          "body { color: #20242a; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.65; margin: 1rem; } a { color: #2563eb; } img { height: auto; max-width: 100%; } table { border-collapse: collapse; margin: 1rem 0; max-width: 100%; width: 100%; } td, th { padding: 0.5rem; vertical-align: top; } body::after { clear: both; content: ''; display: block; }",
         formats: {
           alignleft: [
             { selector: "img", styles: { float: "left", margin: "0 1rem 1rem 0" } },
@@ -57,11 +58,22 @@ export function TinyEditor({ disabled = false, id = "tiny-editor", onChange, val
         },
         menubar: false,
         object_resizing: "img",
-        plugins: "autolink link lists image code wordcount",
+        plugins: "autolink link lists image table code wordcount",
         resize_img_proportional: true,
+        setup: (editor) => {
+          editor.ui.registry.addButton("twoColumnLayout", {
+            text: "2 колонки",
+            tooltip: "Вставить блок: текст слева, изображение справа",
+            onAction: () => {
+              editor.insertContent(
+                '<table style="width: 100%; border-collapse: collapse; table-layout: fixed;"><tbody><tr><td style="width: 60%; vertical-align: top; padding: 0.5rem;"><p>Текст слева</p></td><td style="width: 40%; vertical-align: top; padding: 0.5rem;"><p>Вставьте изображение справа</p></td></tr></tbody></table>'
+              );
+            }
+          });
+        },
         skin: false,
         toolbar:
-          "undo redo | blocks | bold italic underline | bullist numlist | alignleft aligncenter alignright | link unlink | image | removeformat | code",
+          "undo redo | blocks | bold italic underline | bullist numlist | alignleft aligncenter alignright | link unlink | image table twoColumnLayout | removeformat | code",
         toolbar_mode: "sliding"
       }}
       licenseKey="gpl"
