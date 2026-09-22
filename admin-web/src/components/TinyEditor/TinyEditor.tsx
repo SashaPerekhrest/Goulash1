@@ -28,6 +28,12 @@ export function TinyEditor({ disabled = false, id = "tiny-editor", onChange, val
       id={id}
       init={{
         branding: false,
+        // Keep image URLs exactly as returned by the upload API (absolute with
+        // the /portfolio/files/... prefix). Without this TinyMCE rewrites them
+        // to relative paths like ../files/..., which break on pages of
+        // different depth.
+        convert_urls: false,
+        relative_urls: false,
         content_css: false,
         content_style:
           "body { color: #20242a; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.65; margin: 1rem; } a { color: #2563eb; } img { height: auto; max-width: 100%; } table { border-collapse: collapse; margin: 1rem 0; max-width: 100%; width: 100%; } td, th { padding: 0.5rem; vertical-align: top; } body::after { clear: both; content: ''; display: block; }",
