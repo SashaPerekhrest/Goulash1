@@ -6,7 +6,7 @@
 
 ## Backend API
 
-- `GET /portfolio/api/health` через host nginx возвращает `200 OK`.
+- `GET /portfolio/` через host nginx открывает публичную страницу (rendered HTML содержит данные из API).
 - Swagger доступен по `http://localhost:5000/swagger` в `Development`.
 - `POST /portfolio/api/auth/login` возвращает JWT для development-администратора.
 - `GET /portfolio/api/auth/me` без токена возвращает `401`.

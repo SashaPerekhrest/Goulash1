@@ -14,7 +14,11 @@ env:
   NEXT_PUBLIC_API_BASE_URL: /portfolio/api
   NEXT_PUBLIC_BASE_PATH: /portfolio
   ADMIN_API_BASE_URL: /portfolio
+  # Vite build base, must end with a slash.
   ADMIN_BASE_PATH: /portfolio/admin/
+  # Path served by the nginx instance inside the admin-web container (envsubst
+  # at container start), no trailing slash.
+  ADMIN_NGINX_BASE_PATH: /portfolio/admin
 
 jobs:
   build_and_push_images:
@@ -88,7 +92,7 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=${{ env.ADMIN_API_BASE_URL }}
             VITE_ADMIN_BASE_PATH=${{ env.ADMIN_BASE_PATH }}
-            ADMIN_BASE_PATH=/portfolio
+            ADMIN_BASE_PATH=${{ env.ADMIN_NGINX_BASE_PATH }}
           tags: |
             ${{ steps.image_names.outputs.admin_web_image }}:${{ github.sha }}
             ${{ steps.image_names.outputs.admin_web_image }}:latest

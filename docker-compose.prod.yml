@@ -78,6 +78,9 @@ services:
     depends_on:
       api:
         condition: service_started
+    environment:
+      # Must match the build-time VITE_ADMIN_BASE_PATH without the trailing slash.
+      ADMIN_BASE_PATH: ${ADMIN_BASE_PATH:-/portfolio/admin}
     ports:
       - "127.0.0.1:5173:5173"
 
