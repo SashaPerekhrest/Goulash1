@@ -11,8 +11,10 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  NEXT_PUBLIC_API_BASE_URL: /api
-  ADMIN_API_BASE_URL: ""
+  NEXT_PUBLIC_API_BASE_URL: /portfolio/api
+  NEXT_PUBLIC_BASE_PATH: /portfolio
+  ADMIN_API_BASE_URL: /portfolio
+  ADMIN_BASE_PATH: /portfolio/admin/
 
 jobs:
   build_and_push_images:
@@ -70,6 +72,7 @@ jobs:
           build-args: |
             API_URL=http://api:5000
             NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_BASE_PATH=${{ env.NEXT_PUBLIC_BASE_PATH }}
           tags: |
             ${{ steps.image_names.outputs.public_web_image }}:${{ github.sha }}
             ${{ steps.image_names.outputs.public_web_image }}:latest
@@ -84,6 +87,8 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=${{ env.ADMIN_API_BASE_URL }}
+            VITE_ADMIN_BASE_PATH=${{ env.ADMIN_BASE_PATH }}
+            ADMIN_BASE_PATH=/portfolio
           tags: |
             ${{ steps.image_names.outputs.admin_web_image }}:${{ github.sha }}
             ${{ steps.image_names.outputs.admin_web_image }}:latest

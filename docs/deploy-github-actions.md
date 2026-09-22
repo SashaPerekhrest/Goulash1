@@ -101,9 +101,10 @@ IMAGE_TAG=latest
 PUBLIC_SITE_ORIGIN=https://example.com
 
 API_URL=http://api:5000
-NEXT_PUBLIC_API_URL=/api
-# Admin API paths already include /api, so keep this empty for same-origin nginx routing.
-VITE_API_BASE_URL=
+NEXT_PUBLIC_BASE_PATH=/portfolio
+NEXT_PUBLIC_API_URL=/portfolio/api
+# Admin API paths already include /api, so keep only the shared prefix here.
+VITE_API_BASE_URL=/portfolio
 
 POSTGRES_DB=portfolio
 POSTGRES_USER=portfolio
@@ -120,7 +121,7 @@ JWT_AUDIENCE=portfolio-admin
 JWT_SECRET=replace-with-a-long-random-secret-at-least-32-chars
 JWT_LIFETIME_MINUTES=60
 
-STORAGE_PUBLIC_BASE_URL=https://example.com/files/portfolio
+STORAGE_PUBLIC_BASE_URL=https://example.com/portfolio/files/portfolio
 STORAGE_BUCKET_NAME=portfolio
 STORAGE_REGION=us-east-1
 STORAGE_ACCESS_KEY=
@@ -188,7 +189,7 @@ sudo apt install -y nginx
 sudo nano /etc/nginx/sites-available/goulash1
 ```
 
-Пример для одного домена:
+Пример для одного домена, когда весь проект обслуживается под префиксом `/portfolio` (корень домена остается свободным для других проектов). Префикс задается переменной `NEXT_PUBLIC_BASE_PATH=/portfolio` и зашивается в образы при сборке:
 
 ```nginx
 server {
@@ -197,7 +198,17 @@ server {
 
     client_max_body_size 10m;
 
-    location /api/ {
+    # Next.js with basePath redirects /portfolio/ -> /portfolio itself (308),
+    # so /portfolio without a slash must reach the Next.js container as is.
+    location = /portfolio {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /portfolio/api/ {
         proxy_pass http://127.0.0.1:5000/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -205,15 +216,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /admin/ {
-        proxy_pass http://127.0.0.1:5173/admin/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /files/ {
+    location /portfolio/files/ {
         proxy_pass http://127.0.0.1:8333/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -221,7 +224,15 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location / {
+    location /portfolio/admin/ {
+        proxy_pass http://127.0.0.1:5173;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /portfolio/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -230,6 +241,8 @@ server {
     }
 }
 ```
+
+Важно: `/portfolio/api/` и `/portfolio/files/` проксируются со слешем в конце `proxy_pass` (префикс срезается), а `/portfolio/` и `/portfolio/admin/` - без слеша (префикс сохраняется, Next.js и admin nginx обслуживают пути с basePath сами). Редирект `/portfolio/` на `/portfolio` выполняет сам Next.js - nginx не должен перехватывать этот маршрут.
 
 Включите сайт:
 
@@ -282,9 +295,9 @@ docker compose -f docker-compose.prod.yml logs api --tail=100
 Публичные проверки:
 
 ```text
-https://example.com/
-https://example.com/admin/
-https://example.com/api/health
+https://example.com/portfolio/
+https://example.com/portfolio/admin/
+https://example.com/portfolio/api/health
 ```
 
 Не используйте `docker compose down -v` и `docker volume prune` для обычного деплоя: это удалит данные PostgreSQL и SeaweedFS.

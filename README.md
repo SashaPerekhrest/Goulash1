@@ -38,6 +38,17 @@ docker-compose.yml
 - SeaweedFS S3: http://localhost:8333
 - SeaweedFS UI: http://localhost:9333
 
+## URL-префикс в production
+
+В production весь проект может обслуживаться под общим URL-префиксом, чтобы корень домена оставался свободным для других приложений. Префикс задается переменной `NEXT_PUBLIC_BASE_PATH` (по умолчанию `/portfolio` в CI) и зашивается в образы при сборке:
+
+- Public Web: `https://example.com/portfolio/`
+- Admin Web: `https://example.com/portfolio/admin/`
+- API: `https://example.com/portfolio/api/`
+- Files: `https://example.com/portfolio/files/`
+
+Требования к host nginx и `.env` описаны в [`docs/deploy-github-actions.md`](docs/deploy-github-actions.md). Локальная разработка работает без префикса на корневых маршрутах.
+
 ## Docker Compose запуск
 
 ```bash
@@ -131,7 +142,7 @@ Docker Compose поднимает:
 
 Backend-контейнер использует внутренние адреса `postgres:5432` и `seaweedfs:8333`. Публичный URL файлов для браузера остается `http://localhost:8333/portfolio`.
 
-Public Web внутри контейнера ходит к backend по `API_URL`, по умолчанию `http://api:5000`. Browser-visible URL для публичного сайта задается через `NEXT_PUBLIC_API_URL`, а для статической админки через `VITE_API_BASE_URL`; в локальном Docker Compose оба обычно остаются `http://localhost:5000`. Admin Web является статической Vite-сборкой под nginx; для маршрутов `/admin/*` настроен fallback на `index.html`.
+Public Web внутри контейнера ходит к backend по `API_URL`, по умолчанию `http://api:5000`. Browser-visible URL для публичного сайта задается через `NEXT_PUBLIC_API_URL`, а для статической админки через `VITE_API_BASE_URL`; в production оба используют одинаковый префикс (`/portfolio/api` и `/portfolio`). Admin Web является статической Vite-сборкой под nginx; путь обслуживания задается через `VITE_ADMIN_BASE_PATH` (сборка) и `ADMIN_BASE_PATH` (nginx в контейнере), по умолчанию `/admin/`.
 
 Миграции EF Core заранее лежат в репозитории и применяются автоматически при старте API в `Development` окружении. Migration-файлы не нужно писать вручную; новые миграции создаются через EF Core CLI.
 
@@ -146,6 +157,7 @@ Public Web внутри контейнера ходит к backend по `API_URL
 - `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_SECRET`, `JWT_LIFETIME_MINUTES`
 - `STORAGE_BUCKET_NAME`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`
 - `API_URL`, `NEXT_PUBLIC_API_URL`, `VITE_API_BASE_URL`
+- `NEXT_PUBLIC_BASE_PATH` - URL-префикс проекта в production (см. раздел выше)
 
 ## Основные маршруты
 

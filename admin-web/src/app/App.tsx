@@ -9,6 +9,8 @@ import { RequireAuth } from "../features/auth/RequireAuth";
 import { AboutPage } from "../features/pages/AboutPage";
 import { ProjectsPage } from "../features/projects/ProjectsPage";
 
+const adminBasePath = (import.meta.env.VITE_ADMIN_BASE_PATH || "/admin/").replace(/\/$/, "");
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -42,7 +44,7 @@ export function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
-          <BrowserRouter basename="/admin">
+          <BrowserRouter basename={adminBasePath}>
             <Routes>
               <Route element={<RootRedirect />} path="/" />
               <Route element={<LoginPage />} path="/login" />

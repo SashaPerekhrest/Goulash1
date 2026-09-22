@@ -31,8 +31,10 @@ function redirectAdminRoot() {
   };
 }
 
+const adminBasePath = process.env.VITE_ADMIN_BASE_PATH || "/admin/";
+
 export default defineConfig({
-  base: "/admin/",
+  base: adminBasePath,
   plugins: [redirectAdminRoot(), react()],
   server: {
     port: 5173
