@@ -15,7 +15,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
 
-# Serving path inside the container: <ADMIN_BASE_PATH>/admin, e.g. /portfolio/admin.
+# Serving path inside the container, e.g. /admin.
 ARG ADMIN_BASE_PATH=/admin
 ENV ADMIN_BASE_PATH=$ADMIN_BASE_PATH
 

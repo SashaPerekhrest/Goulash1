@@ -11,14 +11,15 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  NEXT_PUBLIC_API_BASE_URL: /portfolio/api
-  NEXT_PUBLIC_BASE_PATH: /portfolio
-  ADMIN_API_BASE_URL: /portfolio
+  # The project is served from the subdomain root. API requests stay same-origin.
+  NEXT_PUBLIC_API_BASE_URL: /api
+  NEXT_PUBLIC_BASE_PATH: ""
+  ADMIN_API_BASE_URL: ""
   # Vite build base, must end with a slash.
-  ADMIN_BASE_PATH: /portfolio/admin/
+  ADMIN_BASE_PATH: /admin/
   # Path served by the nginx instance inside the admin-web container (envsubst
   # at container start), no trailing slash.
-  ADMIN_NGINX_BASE_PATH: /portfolio/admin
+  ADMIN_NGINX_BASE_PATH: /admin
 
 jobs:
   build_and_push_images:

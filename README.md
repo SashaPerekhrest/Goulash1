@@ -38,16 +38,16 @@ docker-compose.yml
 - SeaweedFS S3: http://localhost:8333
 - SeaweedFS UI: http://localhost:9333
 
-## URL-префикс в production
+## Production на поддомене
 
-В production весь проект может обслуживаться под общим URL-префиксом, чтобы корень домена оставался свободным для других приложений. Префикс задается переменной `NEXT_PUBLIC_BASE_PATH` (по умолчанию `/portfolio` в CI) и зашивается в образы при сборке:
+Рекомендуемая production-схема размещает проект в корне отдельного поддомена. Например:
 
-- Public Web: `https://example.com/portfolio/`
-- Admin Web: `https://example.com/portfolio/admin/`
-- API: `https://example.com/portfolio/api/`
-- Files: `https://example.com/portfolio/files/`
+- Public Web: `https://portfolio.example.com/`
+- Admin Web: `https://portfolio.example.com/admin/`
+- API: `https://portfolio.example.com/api/`
+- Files: `https://portfolio.example.com/files/`
 
-Требования к host nginx и `.env` описаны в [`docs/deploy-github-actions.md`](docs/deploy-github-actions.md). Локальная разработка работает без префикса на корневых маршрутах.
+Для этой схемы `NEXT_PUBLIC_BASE_PATH` пустой, а пути сборки админки — `/admin/` и `/admin`. Workflow собирает frontend-образы с этими путями; host nginx направляет запросы на локальные порты контейнеров. Настройка DNS, nginx, SSL и production `.env` описана в [`docs/deploy-github-actions.md`](docs/deploy-github-actions.md). Локальная разработка также работает на localhost.
 
 ## Docker Compose запуск
 
@@ -140,9 +140,9 @@ Docker Compose поднимает:
 - `public-web`
 - `admin-web`
 
-Backend-контейнер использует внутренние адреса `postgres:5432` и `seaweedfs:8333`. Публичный URL файлов для браузера остается `http://localhost:8333/portfolio`.
+Backend-контейнер использует внутренние адреса `postgres:5432` и `seaweedfs:8333`. Локальный публичный URL файлов для браузера остается `http://localhost:8333/portfolio`; production использует URL на поддомене.
 
-Public Web внутри контейнера ходит к backend по `API_URL`, по умолчанию `http://api:5000`. Browser-visible URL для публичного сайта задается через `NEXT_PUBLIC_API_URL`, а для статической админки через `VITE_API_BASE_URL`; в production оба используют одинаковый префикс (`/portfolio/api` и `/portfolio`). Admin Web является статической Vite-сборкой под nginx; путь обслуживания задается через `VITE_ADMIN_BASE_PATH` (сборка) и `ADMIN_BASE_PATH` (nginx в контейнере), по умолчанию `/admin/`.
+Public Web внутри контейнера ходит к backend по `API_URL`, по умолчанию `http://api:5000`. Browser-visible URL публичного сайта — `/api`, админка использует относительные same-origin запросы. Admin Web является статической Vite-сборкой под nginx; путь задается при сборке через `VITE_ADMIN_BASE_PATH=/admin/` и при запуске контейнера через `ADMIN_BASE_PATH=/admin`.
 
 Миграции EF Core заранее лежат в репозитории и применяются автоматически при старте API в `Development` окружении. Migration-файлы не нужно писать вручную; новые миграции создаются через EF Core CLI.
 
@@ -157,7 +157,7 @@ Public Web внутри контейнера ходит к backend по `API_URL
 - `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_SECRET`, `JWT_LIFETIME_MINUTES`
 - `STORAGE_BUCKET_NAME`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`
 - `API_URL`, `NEXT_PUBLIC_API_URL`, `VITE_API_BASE_URL`
-- `NEXT_PUBLIC_BASE_PATH` - URL-префикс проекта в production (см. раздел выше)
+- `NEXT_PUBLIC_BASE_PATH` - URL-префикс Next.js; в production на поддомене оставить пустым
 
 ## Основные маршруты
 

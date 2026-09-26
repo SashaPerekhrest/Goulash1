@@ -29,7 +29,7 @@ export function TinyEditor({ disabled = false, id = "tiny-editor", onChange, val
       init={{
         branding: false,
         // Keep image URLs exactly as returned by the upload API (absolute with
-        // the /portfolio/files/... prefix). Without this TinyMCE rewrites them
+        // the public files path). Without this TinyMCE rewrites them
         // to relative paths like ../files/..., which break on pages of
         // different depth.
         convert_urls: false,

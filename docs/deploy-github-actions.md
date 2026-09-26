@@ -98,13 +98,13 @@ nano /opt/goulash1/.env
 GHCR_OWNER=your-github-owner-lowercase
 IMAGE_TAG=latest
 
-PUBLIC_SITE_ORIGIN=https://example.com
+PUBLIC_SITE_ORIGIN=https://portfolio.example.com
 
 API_URL=http://api:5000
-NEXT_PUBLIC_BASE_PATH=/portfolio
-NEXT_PUBLIC_API_URL=/portfolio/api
-# Admin API paths already include /api, so keep only the shared prefix here.
-VITE_API_BASE_URL=/portfolio
+# Empty means that the public Next.js app is served from the subdomain root.
+NEXT_PUBLIC_BASE_PATH=
+NEXT_PUBLIC_API_URL=/api
+ADMIN_BASE_PATH=/admin
 
 POSTGRES_DB=portfolio
 POSTGRES_USER=portfolio
@@ -121,7 +121,7 @@ JWT_AUDIENCE=portfolio-admin
 JWT_SECRET=replace-with-a-long-random-secret-at-least-32-chars
 JWT_LIFETIME_MINUTES=60
 
-STORAGE_PUBLIC_BASE_URL=https://example.com/portfolio/files/portfolio
+STORAGE_PUBLIC_BASE_URL=https://portfolio.example.com/files/portfolio
 STORAGE_BUCKET_NAME=portfolio
 STORAGE_REGION=us-east-1
 STORAGE_ACCESS_KEY=
@@ -129,6 +129,7 @@ STORAGE_SECRET_KEY=
 ```
 
 `JWT_SECRET` должен быть не короче 32 символов.
+`VITE_API_BASE_URL` задается как пустой build argument в GitHub Actions, чтобы админка отправляла API-запросы на тот же поддомен. Это значение не нужно задавать в серверном `.env`.
 
 ## 3. SSH key для GitHub Actions
 
@@ -183,48 +184,26 @@ sudo apt update
 sudo apt install -y nginx
 ```
 
-Создайте конфиг:
+Создайте отдельный конфиг для поддомена:
 
 ```bash
-sudo nano /etc/nginx/sites-available/goulash1
+sudo nano /etc/nginx/sites-available/portfolio.example.com
 ```
 
-Пример для одного домена, когда весь проект обслуживается под префиксом `/portfolio` (корень домена остается свободным для других проектов). Префикс задается переменной `NEXT_PUBLIC_BASE_PATH=/portfolio` и зашивается в образы при сборке:
+Замените `portfolio.example.com` на точное имя вашего поддомена:
 
 ```nginx
 server {
     listen 80;
-    server_name example.com www.example.com;
+    server_name portfolio.example.com;
 
     client_max_body_size 10m;
 
-    # Next.js with basePath redirects /portfolio/ -> /portfolio itself (308),
-    # so /portfolio without a slash must reach the Next.js container as is.
-    location = /portfolio {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    location = /admin {
+        return 308 /admin/;
     }
 
-    location /portfolio/api/ {
-        proxy_pass http://127.0.0.1:5000/api/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /portfolio/files/ {
-        proxy_pass http://127.0.0.1:8333/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /portfolio/admin/ {
+    location ^~ /admin/ {
         proxy_pass http://127.0.0.1:5173;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -232,7 +211,26 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location /portfolio/ {
+    # Keep /api in the request path sent to ASP.NET Core.
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Strip /files/ so /files/portfolio/image.png becomes /portfolio/image.png
+    # on SeaweedFS.
+    location ^~ /files/ {
+        proxy_pass http://127.0.0.1:8333/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -242,36 +240,29 @@ server {
 }
 ```
 
-Важно: `/portfolio/api/` и `/portfolio/files/` проксируются со слешем в конце `proxy_pass` (префикс срезается), а `/portfolio/` и `/portfolio/admin/` - без слеша (префикс сохраняется, Next.js и admin nginx обслуживают пути с basePath сами). Редирект `/portfolio/` на `/portfolio` выполняет сам Next.js - nginx не должен перехватывать этот маршрут.
+Здесь `proxy_pass` для API указан без завершающего URI slash, поэтому nginx сохраняет `/api/...`. Для файлов завершающий slash срезает `/files/`: SeaweedFS получает исходный путь bucket, например `/portfolio/image.png`. Админский nginx получает `/admin/...` без изменения пути. Остальные маршруты идут в Next.js.
 
 Включите сайт:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/goulash1 /etc/nginx/sites-enabled/goulash1
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Если включен дефолтный сайт nginx и он мешает:
-
-```bash
-sudo rm /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/portfolio.example.com /etc/nginx/sites-enabled/portfolio.example.com
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
 ## 5. SSL через certbot
 
-Установите certbot:
+DNS A-запись поддомена должна уже указывать на сервер, а входящие порты 80 и 443 должны быть доступны. Установите Certbot для nginx согласно текущей официальной инструкции; для Ubuntu через Snap:
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/local/bin/certbot
 ```
 
-Выпустите сертификат:
+Выпустите сертификат для точного имени поддомена и включите HTTPS:
 
 ```bash
-sudo certbot --nginx -d example.com -d www.example.com
+sudo certbot --nginx -d portfolio.example.com
 ```
 
 Проверьте автообновление:
@@ -292,12 +283,16 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs api --tail=100
 ```
 
-Публичные проверки:
+Проверки после переключения:
 
 ```text
-https://example.com/portfolio/
-https://example.com/portfolio/admin/
-https://example.com/portfolio/api/health
+https://portfolio.example.com/
+https://portfolio.example.com/admin/
+https://portfolio.example.com/api/projects?category=AI
 ```
+
+У backend health endpoint находится по `/health` (внутри сервера: `http://127.0.0.1:5000/health`), а не `/api/health`.
+
+Новые загруженные изображения будут иметь URL поддомена. Уже сохраненные в PostgreSQL полные URL с прежним доменом или `/portfolio/files/` сами не меняются: до выключения старого маршрута нужно перенести их адреса в колонках проектов и HTML-контенте страницы `about`, либо сохранить совместимость со старым URL в nginx.
 
 Не используйте `docker compose down -v` и `docker volume prune` для обычного деплоя: это удалит данные PostgreSQL и SeaweedFS.
